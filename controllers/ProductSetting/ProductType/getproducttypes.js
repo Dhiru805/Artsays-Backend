@@ -1,4 +1,4 @@
-const ProductType = require("../../../Models/Producttype");
+const ProductType = require("../../../Models/producttype");
 
 const getProductTypes = async (req, res) => {
   try {

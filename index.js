@@ -141,8 +141,6 @@ app.get("/api/message/:conversationId", async (req, res) => {
 require("./Routes")(app);
 
 // Start server
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 // require('./routes')(app);
 
 // Socket.IO server
@@ -276,5 +274,5 @@ try {
 }
 
 // Start server
-// const PORT = process.env.PORT || 3001;
-// server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const PORT = process.env.PORT || 3001;
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

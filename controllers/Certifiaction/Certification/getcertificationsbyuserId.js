@@ -13,11 +13,22 @@ const getCertificationsByUserId = async (req, res) => {
     }
 
     const certifications = await Certifications.find({ userId })
-      .populate("userId")
-      .populate("productId")
-      .populate("mainCategoryId")
-      .populate("certificationId");
-
+      .populate({
+        path: "userId",
+        select: "name lastName",
+      })
+      .populate({
+        path: "productId",
+        select: "productName",
+      })
+      .populate({
+        path: "mainCategoryId",
+        select: "mainCategoryName",
+      })
+      .populate({
+        path: "certificationId",
+        select: "certificationName estimatedDays",
+      });
 
     if (!certifications || certifications.length === 0) {
       return res.status(404).json({

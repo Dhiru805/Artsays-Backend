@@ -1,4 +1,4 @@
-const ProductType = require("../../../Models/Producttype");
+const ProductType = require("../../../Models/producttype");
 
 const createProductType = async (req, res) => {
   try {
@@ -9,14 +9,10 @@ const createProductType = async (req, res) => {
 
     const newProductType = new ProductType({ name });
     await newProductType.save();
-    res
-      .status(201)
-      .json({ message: "Product Type added successfully", newProductType });
+       res.status(201).json({ message: "Product Type added successfully", newProductType });
   } catch (error) {
     if (error.code === 11000) {
-      return res
-        .status(400)
-        .json({ error: "Product Type name must be unique" });
+      return res.status(400).json({ error: "Product Type name must be unique" });
     }
     res.status(500).json({ error: error.message });
   }

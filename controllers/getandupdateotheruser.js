@@ -812,7 +812,6 @@ const getTaxLegalCompliance = async (req, res) => {
 
 //                   <div class="content" style="padding: 30px;">
 //                     <p style="font-size: 18px; margin-bottom: 25px; color: #2d3748;">Dear ${updatedUser.name} ${updatedUser.lastName},</p>
-
 //                     <p style="margin-bottom: 25px; font-size: 16px; color: #4a5568;">${config.message}</p>
 
 //                     <div style="background: ${config.bgColor}; border-left: 4px solid ${config.borderColor}; padding: 20px; margin: 25px 0; border-radius: 4px;">

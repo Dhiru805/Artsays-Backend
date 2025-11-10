@@ -3,548 +3,227 @@ const mongoose = require('mongoose');
 const productSchema = new mongoose.Schema(
   {
     //--------------------------------------------------------Basic Details-----------------------------//
-    productName: {
-      type: String,
-      trim: true,
-      required: true
-    },
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true
-    },
-    mainCategory: {
-      type: String,
-      ref: 'MainCategory',
-      required: true
-    },
-    category: {
-      type: String,
-      // type: mongoose.Schema.Types.ObjectId,
-      ref: 'Category',
-      required: true
-    },
-    subCategory: {
-      type: String,
-      // type: mongoose.Schema.Types.ObjectId,
-      ref: 'SubCategory',
-      required: true
-    },
-    productType: {
-      type: String,
-      enum: ['original', 'limited', 'open', 'nft'],
-      required: true
-    },
-    editionNumber: {
-      type: Number,
-      min: 1
-    },
-    description: {
-      type: String,
-      required: true
-    },
-    targetedAudience: {
-      type: String,
-      trim: true,
-      required: true
-    },
-    inspirationSource: {
-      type: String,
-      trim: true,
-      required: true
-    },
-    tags: {
-      type: [String],
-      default: []
-    },
+    productName: { type: String, trim: true },
+    slug: { type: String },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    mainCategory: { type: String, ref: 'MainCategory' },
+    category: { type: String, ref: 'Category' },
+    subCategory: { type: String, ref: 'SubCategory' },
+    productType: { type: [String] },
+    editionNumber: { type: Number, min: 1 },
+    description: { type: String },
+    targetedAudience: { type: String, trim: true },
+    inspirationSource: { type: String, trim: true },
+    tags: { type: [String], default: [] },
 
- //--------------------------------------------------------Artwork Details-----------------------------//
-    medium: {
-      type: String,
-      required: true,
-    },
-    materials: {
-      type: [String],
-      required: true,
-    },
+    //--------------------------------------------------------Artwork Details-----------------------------//
+    medium: { type: String },
+    materials: { type: [String] },
     dimensions: {
-      width: { type: Number, required: true },
-      height: { type: Number, required: true },
-      depth: { type: Number, required: true },
+      width: { type: Number, default: 0 },
+      height: { type: Number, default: 0 },
+      depth: { type: Number, default: 0 },
     },
-    weight: {
-      type: Number,
-    },
-    printResolution: {
-      type: String,
-      trim: true,
-    },
-    year: {
-      type: Number,
-      required: true,
-    },
-    editionType: {
-      type: String,
-      required: true,
-    },
+    weight: { type: Number, default: 0 },
+    printResolution: { type: String, trim: true },
+    year: { type: Number },
+    editionType: { type: String },
+
+    // Fixed: Enums with safe defaults
     framing: {
       type: String,
-      enum: ['framed', 'unframed', 'rolled'],
-      required: true,
     },
-    quantity: {
-      type: Number,
-      required: true,
-      min: 1,
-    },
-    hsnCode: {
-      type: String,
-      trim: true,
-    },
-    surfaceType: {
-      type: String,
-    },
-    culturalRegion: {
-      type: String,
-    },
-    biologicalMaterial: {
-      type: String,
-      trim: true,
-    },
+    quantity: { type: Number, min: 1, default: 1 },
+    hsnCode: { type: String, trim: true },
+    surfaceType: { type: String },
+    culturalRegion: { type: String },
+    biologicalMaterial: { type: String, trim: true },
+
     functionalUse: {
       type: String,
-      enum: ['yes', 'no'],
-      required: true,
     },
-    materialSource: {
-      type: String,
-      trim: true,
-    },
-    craftTechnique: {
-      type: String,
-      trim: true,
-    },
-    toolUsage: {
-      type: [String],
-    },
+    materialSource: { type: String, trim: true },
+    craftTechnique: { type: String, trim: true },
+    toolUsage: { type: [String] },
+
     handmade: {
       type: String,
-      enum: ['yes', 'no'],
-      required: true,
     },
-    isSigned: {
-      type: Boolean,
-      required: true,
-      default: false,
-    },
-    isResinCovered: {
-      type: Boolean,
-      default: false,
-    },
+    isSigned: { type: Boolean, default: false },
+    isResinCovered: { type: Boolean, default: false },
+
     condition: {
       type: String,
-      enum: ['new', 'resale', 'pre_owned'],
-      required: true,
     },
-    provenance: {
-      type: String,
-      trim: true,
-    },
+    provenance: { type: String, trim: true },
 
-  //--------------------------------------------------------Image and Media-----------------------------//
-    mainImage: {
-      type: String,
-      required: true
-    },
-    otherImages: {
-      type: [String],
-      default: []
-    },
-    iframeLink: {
-      type: String
-    },
+    //--------------------------------------------------------Image and Media-----------------------------//
+    mainImage: { type: String },
+    otherImages: { type: [String], default: [] },
+    iframeLink: { type: String },
+
     //--------------------------------------------------------Pricing and details-----------------------------------//
-    sellingPrice: {
-      type: Number,
-      required: true,
-      min: 0
-    },
-    marketPrice: {
-      type: Number,
-      min: 0
-    },
-    discount: {
-      type: Number,
-      min: 0,
-      max: 100
-    },
-    finalPrice: {
-      type: Number,
-      required: true,
-      min: 0
-    },
-    offers: {
-      type: [String],
-      default: []
-    },
-    allowInstallments: {
-      type: Boolean,
-      default: false
-    },
+    sellingPrice: { type: Number, min: 0 },
+    marketPrice: { type: Number, min: 0 },
+    discount: { type: Number, min: 0, max: 100, default: 0 },
+    finalPrice: { type: Number, min: 0 },
+    allowInstallments: { type: Boolean, default: false },
     installmentDuration: {
       type: String,
-      enum: ['yearly', 'lifetime'],
+      enum: ['Yearly', 'Lifetime', null],
       default: null
     },
-    includeGst: {
-      type: Boolean,
-      default: false
-    },
-    gstPercentage: {
-      type: Number,
-      min: 0,
-      max: 100,
-      default: 0
-    },
+    includeGst: { type: Boolean, default: false },
+    gstPercentage: { type: Number, min: 0, max: 100, default: 0 },
     status: {
       type: String,
-      enum: ['Pending', 'Approved', 'Rejected'],
+      enum: ['Pending', 'Approved', 'Rejected', 'Drafted'],
       default: 'Pending'
     },
 
     // ------------------------------------------Shipping & Delivery -----------------------------------------------//
-    shippingCharges: {
-      type: Number,
-      required: true,
-      min: 0
-    },
-    handlingTime: {
-      type: String,
-      required: true,
-      trim: true
-    },
-    estimatedDelivery: {
-      type: String,
-      required: true,
-      trim: true
-    },
-    packagingType: {
-      type: String,
-      required: true,
-      trim: true
-    },
-    insuranceCoverage: {
-      type: Boolean,
-      default: false
-    },
-    selfShipping: {
-      type: Boolean,
-      default: false
-    },
-    quantity: {
-      type: Number,
-      required: true,
-      min: 1
-    },
-    hsnCode: {
-      type: String,
-      trim: true
-    },
-    surfaceType: {
-      type: String
-    },
-    isSigned: {
-      type: Boolean,
-      required: true,
-      default: false
-    },
-    condition: {
-      type: String,
-      enum: ['new', 'resale', 'pre_owned'],
-      required: true
-    },
-    provenance: {
-      type: String,
-      trim: true
-    },
+    shippingCharges: { type: Number, min: 0, default: 0 },
+    handlingTime: { type: String, trim: true },
+    estimatedDelivery: { type: String, trim: true },
+    packagingType: { type: String, trim: true },
+    insuranceCoverage: { type: Boolean, default: false },
+    selfShipping: { type: Boolean, default: false },
+
     returnPolicy: {
       type: String,
-      enum: ['returnable', 'non-returnable'],
-      required: true
+      enum: ['Returnable', 'Non-returnable'],
+      default: 'Non-returnable'
     },
-    exportRestriction: {
-      type: Boolean,
-      default: false
-    },
+    exportRestriction: { type: Boolean, default: false },
 
     // ------------------------------------------Payout and Details -----------------------------------------------//
-    
-    autoCancelOrder: {
-      type: Boolean,
-      default: false
+    autoCancelOrder: { type: Boolean, default: false },
+    giftWrapping: { type: Boolean, default: false },
+    giftWrappingCustomMessage: { type: String, trim: true, default: '' },
+    giftWrappingCost: { type: Boolean, default: false },
+    giftWrappingCostAmount: { type: Number, min: 0, default: 0 },
+
+    //------------------------------------Legal & Compliance -------------------------------------------------//
+    ownershipConfirmation: { type: Boolean, default: false },
+
+    copyrightRights: {
+      type: String,
+      default: 'No reproduction/resale rights granted'
     },
-    giftWrapping: {
-      type: Boolean,
-      default: false
+    prohibitedItems: { type: Boolean, default: false },
+    artistSignature: { type: Boolean, default: false },
+    signatureType: { type: String, trim: true },
+
+    coaAvailable: { type: Boolean, default: false },
+    certificateType: {
+      type: String,
+      enum: ['Artist Signed', 'Third-Party Certified', 'Museum-Approved', 'Gallery-Certified']
     },
-    giftWrappingCustomMessage: {
+    issuerName: { type: String, trim: true },
+    verificationNumber: { type: String, trim: true },
+    certificateFormat: {
+      type: String,
+      enum: ['digital', 'physical'],
+      default: 'digital'
+    },
+
+    certificateFile: { type: String },
+    coaFile: { type: String },
+
+    // License & Usage Rights
+    commercialUse: {
+      type: String,
+      enum: ['Yes', 'No'],
+      default: 'No'
+    },
+    royaltyTerms: { type: String, trim: true, default: '' },
+    ethicalSourcing: { type: Boolean, default: false },
+
+    // NFT Details 
+    blockchainNetwork: { type: String, trim: true },
+    smartContractAddress: { type: String, trim: true },
+    tokenStandard: { type: String, trim: true },
+    tokenId: { type: String, trim: true, unique: true },
+    walletAddress: { type: String, trim: true },
+    royaltyPercentage: { type: Number, min: 0, max: 50 },
+    mintingType: { type: String, enum: ['pre_minted', 'lazy'] },
+    licenseType: { type: String, enum: ['personal', 'limited', 'full', 'exclusive'] },
+    ipfsStorage: { type: Boolean, default: false },
+    ipfsLink: {
       type: String,
       trim: true,
-      default: ''
+      default: null
     },
-    giftWrappingCost: {
-      type: Boolean,
-      default: false
-    },
-    giftWrappingCostAmount: {
-      type: Number,
-      min: 0,
-      default: 0
-    },
-
-   //------------------------------------Legal & Compliance -------------------------------------------------//
-  ownershipConfirmation: {
-    type: Boolean,
-    required: true,
-    default: false
-  },
-  copyrightRights: {
-    type: String,
-    enum: ['full_rights', 'personal_use', 'no_rights'],
-    required: true
-  },
-  prohibitedItems: {
-    type: Boolean,
-    required: true,
-    default: false
-  },
-  artistSignature: {
-    type: Boolean,
-    required: true,
-    default: false
-  },
-  signatureType: {
-    type: String,
-    trim: true
-  },
-
-
-  coaAvailable: {
-    type: Boolean,
-    required: true,
-    default: false
-  },
-  certificateType: {
-    type: String,
-    enum: ['artist_signed', 'third_party', 'museum', 'gallery']
-  },
-  issuerName: {
-    type: String,
-    trim: true
-  },
-  verificationNumber: {
-    type: String,
-    trim: true
-  },
-  certificateFormat: {
-    type: String,
-    enum: ['digital', 'physical'],
-    default: 'digital'
-  },
-
-
-  certificateFile: {
-    type: String
-  },
-  coaFile: {
-    type: String
-  },
-
-  // License & Usage Rights
-commercialUse: {
-  type: String,
-  enum: ['yes', 'no'],
-  default: 'no'
-},
-  royaltyTerms: {
-    type: String,
-    trim: true,
-    default: ''
-  },
-  ethicalSourcing: {
-    type: Boolean,
-    default: false
-  },
-
-     // NFT Details 
-    blockchainNetwork: {
+    softwareVersion: {
       type: String,
       trim: true
     },
-    smartContractAddress: {
+    fileFormat: {
       type: String,
       trim: true
     },
-    tokenStandard: {
-      type: String,
-      trim: true
-    },
-    tokenId: {
+
+    unlockableContent: { type: Boolean, default: false },
+
+    unlockableContentLink: {
       type: String,
       trim: true,
-      unique: true,
-      sparse: true
+      default: null
     },
-    walletAddress: {
-      type: String,
-      trim: true
-    },
-    royaltyPercentage: {
-      type: Number,
-      min: 0,
-      max: 50,
-    },
-    mintingType: {
-      type: String,
-      enum: ['pre_minted', 'lazy']
-    },
-    licenseType: {
-      type: String,
-      enum: ['personal', 'limited', 'full', 'exclusive']
-    },
-    ipfsStorage: {
-      type: Boolean,
-      default: false
-    },
-    unlockableContent: {
-      type: Boolean,
-      default: false
-    },
-    partOfCollection: {
-      type: Boolean,
-      default: false
-    },
-    collectionName: {
-      type: String,
-      trim: true
-    },
+    partOfCollection: { type: Boolean, default: false },
+    collectionName: { type: String, trim: true },
+
     editionSize: {
       type: Number,
-      min: 1
-    },
-    addressLine1: {
-      type: String,
-      trim: true
-    },
-    addressLine2: {
-      type: String,
-      trim: true
-    },
-    landmark: {
-      type: String,
-      trim: true
-    },
-    city: {
-      type: String,
-      trim: true
-    },
-    state: {
-      type: String,
-      trim: true
-    },
-    country: {
-      type: String,
-      trim: true
-    },
-    pincode: {
-      type: String,
-      trim: true
-    },
-    rarityType: {
-      type: String,
-      enum: ['common', 'rare', 'epic', 'legendary']
-    },
-    traits: {
-      type: String,
-      trim: true
+      min: 1,
+      default: 1
     },
 
+    // Address
+    addressLine1: { type: String, trim: true },
+    addressLine2: { type: String, trim: true },
+    landmark: { type: String, trim: true },
+    city: { type: String, trim: true },
+    state: { type: String, trim: true },
+    country: { type: String, trim: true },
+    pincode: { type: String, trim: true },
+
+    rarityType: { type: String, enum: ['common', 'rare', 'epic', 'legendary'] },
+    traits: { type: String, trim: true },
+
     // ----------------------------------------Antique & Vintage Details--------------------------------------------//
-  originRegion: {
-        type: String,
-        required: [true, 'Origin/Region is required']
-    },
-    periodEra: {
-        type: String,
-        required: [true, 'Period/Era is required']
-    },
-    antiqueCondition: {
-        type: String,
-        enum: ['new', 'excellent', 'good', 'fair', 'poor'],
-        required: [true, 'Condition is required']
-    },
-    conservationStatus: {
-        type: String,
-        enum: ['restored', 'original'],
-        required: [true, 'Conservation Status is required']
-    },
-    restorationHistory: {
-        type: String,
-        trim: true
-    },
-    restorationDocumentation: {
-        type: String, 
-       
-    },
-    provenanceHistory: {
-        type: String,
-        trim: true
-    },
-    culturalSignificance: {
-        type: String,
-        trim: true
-    },
-    appraisalDetails: {
-        type: String,
-        trim: true
-    },
-    engravingMarkings: {
-        type: String,
-        trim: true
-    },
-    patinaWear: {
-        type: String,
-        trim: true
-    },
-    isHandmade: {
-        type: Boolean,
-        default: false,
-        required: [true, 'Handmade status is required']
-    },
-    originalReproduction: {
-        type: String,
-        enum: ['original', 'replica', 'reproduction'],
-        required: [true, 'Original vs Reproduction is required']
-    },
-    museumExhibitionHistory: {
-        type: String,
-        trim: true
-    },
-    maintenanceRequired: {
-        type: String,
-        enum: ['yes', 'no'],
-        required: [true, 'Maintenance requirement is required']
-    },
-    customEngravingAvailable: {
-        type: Boolean,
-        default: false
-    },
-    certification: {
-        type: String 
-    }
+    originRegion: { type: String },
+    periodEra: { type: String },
+    antiqueCondition: { type: String, enum: ['new', 'excellent', 'good', 'fair', 'poor'] },
+    conservationStatus: { type: String, enum: ['restored', 'original'] },
+    restorationHistory: { type: String, trim: true },
+    restorationDocumentation: { type: String },
+    provenanceHistory: { type: String, trim: true },
+    culturalSignificance: { type: String, trim: true },
+    appraisalDetails: { type: String, trim: true },
+    engravingMarkings: { type: String, trim: true },
+    patinaWear: { type: String, trim: true },
+    isHandmade: { type: Boolean, default: false },
+    originalReproduction: { type: String, enum: ['original', 'replica', 'reproduction'] },
+    museumExhibitionHistory: { type: String, trim: true },
+    maintenanceRequired: { type: String, enum: ['yes', 'no'] },
+    customEngravingAvailable: { type: Boolean, default: false },
+    certification: { type: String }
   },
   { timestamps: true }
 );
+
+
+productSchema.pre('save', function (next) {
+  if (this.productName && !this.slug) {
+    this.slug = this.productName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+  next();
+});
+
 
 productSchema.index({ createdAt: 1 });
 productSchema.index({ medium: 1 });

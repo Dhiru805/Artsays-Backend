@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router(); // Initialize the router
-const Address = require('../Models/adressschema');
+const Address = require('../Models/Address');
 const User = require('../Models/usermode');
 
 // POST request to add a new address

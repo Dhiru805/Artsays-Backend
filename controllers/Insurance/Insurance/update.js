@@ -1,215 +1,97 @@
-// const InsurancePage = require("../../../Models/Insurance");
-// const path = require("path");
+const mongoose = require("mongoose");
+const InsuranceSetting = require("../../../Models/InsuranceSetting");
+const MainCategory = require("../../../Models/MainCategory");
 
-// const updateInsurancePage = async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const page = await InsurancePage.findById(id);
-//     if (!page)
-//       return res.status(404).json({ success: false, message: "Page not found" });
-
-//     const {
-//       section1Heading,
-//       section1Description,
-//       section2Heading,
-//       section2Description,
-//       section3Heading,
-//       section3Description,
-//       status,
-//     } = req.body;
-
-//     const files = req.files || [];
-
-//     // ---------- SECTION 1 CARDS ----------
-//     let section1Cards = [];
-//     try {
-//       const section1CardsFromClient =
-//         typeof req.body.section1Cards === "string"
-//           ? JSON.parse(req.body.section1Cards)
-//           : req.body.section1Cards || [];
-
-//       section1Cards = section1CardsFromClient.map((card, idx) => {
-//         const file = files.find(
-//           (f) => f.fieldname === `section1Cards[${idx}][image]`
-//         );
-//         return {
-//           image: file
-//             ? path.join("uploads", "insurance", file.filename)
-//             : card.image || null,
-//           title: card.title,
-//           description: card.description,
-//         };
-//       });
-//     } catch {
-//       section1Cards = page.section1Cards || [];
-//     }
-
-//     // ---------- SECTION 2 CARDS ----------
-//     let section2Cards = [];
-//     try {
-//       const section2FromClient =
-//         typeof req.body.section2Cards === "string"
-//           ? JSON.parse(req.body.section2Cards)
-//           : req.body.section2Cards || [];
-
-//       section2Cards = section2FromClient.map((card) => ({
-//         title: card.title,
-//         description: card.description,
-//       }));
-//     } catch {
-//       section2Cards = page.section2Cards || [];
-//     }
-
-//     // ---------- ONLY ONE PUBLISHED PAGE ----------
-//     if (status === "published") {
-//       await InsurancePage.updateMany(
-//         { status: "published", _id: { $ne: id } },
-//         { $set: { status: "draft" } }
-//       );
-//     }
-
-//     // ---------- UPDATE FIELDS ----------
-//     page.section1Heading = section1Heading || page.section1Heading;
-//     page.section1Description = section1Description || page.section1Description;
-//     page.section1Cards = section1Cards;
-//     page.section2Heading = section2Heading || page.section2Heading;
-//     page.section2Description = section2Description || page.section2Description;
-//     page.section2Cards = section2Cards;
-//     page.section3Heading = section3Heading || page.section3Heading;
-//     page.section3Description = section3Description || page.section3Description;
-//     page.status = status || page.status;
-
-//     await page.save();
-
-//     res.status(200).json({ success: true, data: page });
-//     console.log("INSURANCE PAGE UPDATED:", page);
-//   } catch (error) {
-//     console.error("Error updating Insurance page:", error);
-//     res.status(500).json({ success: false, message: error.message });
-//   }
-// };
-
-// module.exports = updateInsurancePage;
-
-
-
-const InsurancePage = require("../../../Models/Insurance");
-const path = require("path");
-
-const updateInsurancePage = async (req, res) => {
+const update = async (req, res) => {
   try {
     const { id } = req.params;
-    const page = await InsurancePage.findById(id);
-    if (!page)
-      return res.status(404).json({ success: false, message: "Page not found" });
+    const { mainCategoryId, insuranceName, oneYear, lifeTime } = req.body;
 
-    const {
-      section1Heading,
-      section1Description,
-      section2Heading,
-      section2Description,
-      section3Heading,
-      section3Description,
-      status,
-    } = req.body;
+    const errors = [];
+    const options = ["oneYear", "lifeTime"];
 
-    const files = req.files || [];
+    if (!mainCategoryId || !mongoose.Types.ObjectId.isValid(mainCategoryId)) {
+      errors.push("Valid main category ID is required.");
+    }
+    if (!insuranceName || typeof insuranceName !== "string" || insuranceName.trim() === "") {
+      errors.push("Valid insurance name is required.");
+    }
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      errors.push("Valid insurance setting ID is required.");
+    }
 
-    // ---------- SECTION 1 CARDS ----------
-    let section1Cards = [];
-    try {
-      const section1CardsFromClient =
-        typeof req.body.section1Cards === "string"
-          ? JSON.parse(req.body.section1Cards)
-          : req.body.section1Cards || [];
+    for (const opt of options) {
+      const option = req.body[opt];
+      if (isNaN(option?.percentage) || option?.percentage < 0) {
+        errors.push(`${opt === "oneYear" ? "1 Year" : "Life Time"} percentage must be a non-negative number.`);
+      }
+      if (!isNaN(option?.percentage) && !Number.isInteger(option?.percentage) && Number(option?.percentage.toFixed(2)) !== option?.percentage) {
+        errors.push(`${opt === "oneYear" ? "1 Year" : "Life Time"} percentage must be an integer or have at most two decimal places.`);
+      }
+      if (isNaN(option?.gst) || option?.gst < 0) {
+        errors.push(`${opt === "oneYear" ? "1 Year" : "Life Time"} GST must be a non-negative number.`);
+      }
+      if (!isNaN(option?.gst) && !Number.isInteger(option?.gst) && Number(option?.gst.toFixed(2)) !== option?.gst) {
+        errors.push(`${opt === "oneYear" ? "1 Year" : "Life Time"} GST must be an integer or have at most two decimal places.`);
+      }
+    }
 
-      section1Cards = section1CardsFromClient.map((card, idx) => {
-        const file = files.find(
-          (f) => f.fieldname === `section1Cards[${idx}][image]`
-        );
-        return {
-          image: file
-            ? path.join("uploads", "insurance", file.filename)
-            : card.image || null,
-          title: card.title,
-          description: card.description,
-        };
+    if (errors.length > 0) {
+      return res.status(400).json({
+        hasError: true,
+        message: errors.join(", "),
       });
-    } catch {
-      section1Cards = page.section1Cards || [];
     }
 
-    // ---------- SECTION 2 CARDS ----------
-    let section2Cards = [];
-    try {
-      const section2FromClient =
-        typeof req.body.section2Cards === "string"
-          ? JSON.parse(req.body.section2Cards)
-          : req.body.section2Cards || [];
-
-      section2Cards = section2FromClient.map((card) => ({
-        title: card.title,
-        description: card.description,
-      }));
-    } catch {
-      section2Cards = page.section2Cards || [];
+    const insuranceSetting = await InsuranceSetting.findById(id);
+    if (!insuranceSetting) {
+      return res.status(404).json({
+        hasError: true,
+        message: `Insurance setting with ID ${id} not found.`,
+      });
     }
 
-    // ---------- SECTION 3 CARDS ----------
-    let section3Cards = [];
-    try {
-      const section3FromClient =
-        typeof req.body.section3Cards === "string"
-          ? JSON.parse(req.body.section3Cards)
-          : req.body.section3Cards || [];
-
-      section3Cards = section3FromClient.map((card) => ({
-        heading: card.heading || "",
-        description: card.description || "",
-        price: card.price || "",
-        cancelCondition: card.cancelCondition || "",
-        eligibility: card.eligibility || "",
-        pointers: Array.isArray(card.pointers)
-          ? card.pointers.map((p) => p || "")
-          : [],
-        buttonName: card.buttonName || "",
-        buttonLink: card.buttonLink || "",
-      }));
-    } catch {
-      section3Cards = page.section3Cards || [];
+    const mainCategoryExists = await MainCategory.findById(mainCategoryId);
+    if (!mainCategoryExists) {
+      return res.status(400).json({
+        hasError: true,
+        message: `The specified main category (ID: ${mainCategoryId}) does not exist.`,
+      });
     }
 
-    // ---------- ONLY ONE PUBLISHED PAGE ----------
-    if (status === "published") {
-      await InsurancePage.updateMany(
-        { status: "published", _id: { $ne: id } },
-        { $set: { status: "draft" } }
-      );
-    }
+    insuranceSetting.mainCategoryId = mainCategoryId;
+    insuranceSetting.insuranceName = insuranceName.trim();
+    insuranceSetting.oneYear = {
+      percentage: Number.isInteger(oneYear.percentage) ? oneYear.percentage : Number(Number(oneYear.percentage).toFixed(2)),
+      gst: Number.isInteger(oneYear.gst) ? oneYear.gst : Number(Number(oneYear.gst).toFixed(2)),
+    };
+    insuranceSetting.lifeTime = {
+      percentage: Number.isInteger(lifeTime.percentage) ? lifeTime.percentage : Number(Number(lifeTime.percentage).toFixed(2)),
+      gst: Number.isInteger(lifeTime.gst) ? lifeTime.gst : Number(Number(lifeTime.gst).toFixed(2)),
+    };
 
-    // ---------- UPDATE FIELDS ----------
-    page.section1Heading = section1Heading || page.section1Heading;
-    page.section1Description = section1Description || page.section1Description;
-    page.section1Cards = section1Cards;
+    await insuranceSetting.save();
 
-    page.section2Heading = section2Heading || page.section2Heading;
-    page.section2Description = section2Description || page.section2Description;
-    page.section2Cards = section2Cards;
-
-    page.section3Heading = section3Heading || page.section3Heading;
-    page.section3Description = section3Description || page.section3Description;
-    page.section3Cards = section3Cards;
-
-    page.status = status || page.status;
-
-    await page.save();
-
-    res.status(200).json({ success: true, data: page });
-    console.log("INSURANCE PAGE UPDATED:", page);
+    return res.status(200).json({
+      hasError: false,
+      message: "Insurance setting updated successfully.",
+      data: insuranceSetting,
+    });
   } catch (error) {
-    console.error("Error updating Insurance page:", error);
-    res.status(500).json({ success: false, message: error.message });
+    console.error("Error updating insurance setting:", error);
+
+    if (error.code === 11000) {
+      return res.status(400).json({
+        hasError: true,
+        message: "An insurance setting with the same main category and insurance name already exists.",
+      });
+    }
+    return res.status(500).json({
+      hasError: true,
+      message: "Failed to update insurance setting.",
+      error: error.message,
+    });
   }
 };
 
-module.exports = updateInsurancePage;
+module.exports = update;

@@ -2,9 +2,9 @@ const express = require("express");
 const router = express.Router();
 const upload = require("../Middlewares/Multerfile/insuranceMulter");
 const {
-  createInsurancePage,
-  updateInsurancePage,
-  deleteInsurancePage,
+  createInsuranceSetting: createInsurancePage,
+  updateInsuranceSetting: updateInsurancePage,
+  deleteInsuranceSetting: deleteInsurancePage,
   getInsurancePages,
   getPublishedInsurancePage,
 } = require("../controllers/Insurance");

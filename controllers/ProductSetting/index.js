@@ -109,5 +109,5 @@ module.exports = {
   createPeriodEra,
   getPeriodEras,
   updatePeriodEra,
-  deletePeriodEra,
+  deletePeriodEra
 };

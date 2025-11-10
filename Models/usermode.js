@@ -1,10 +1,123 @@
+// const mongoose = require('mongoose');
+
+// const userSchema = new mongoose.Schema({
+//   name: { type: String, required: true },
+//   lastName: { type: String, required: true },
+//   email: { type: String, required: false, unique: true, sparse: true },
+//   phone: { type: String, unique: true, sparse: true, },
+//   password: { type: String, required: true },
+//   transactions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Transaction' }],
+//   blogCount: { type: Number, default: 0 },
+//   userType: { type: String, required: true, enum: ['Artist', 'Buyer', 'Super-Admin', 'Admin', 'Seller'] },
+//   role: { type: String, enum: ['super-admin', 'admin', 'artist', 'buyer', 'seller'], required: true, strictPopulate: false },
+//   userrole: { type: String },
+//   refreshToken: { type: String },
+
+//   resetPasswordOtp: { type: String },
+//   resetPasswordOtpExpiry: { type: Date },
+//   address: {
+//     line1: { type: String, default: '' },
+//     line2: { type: String, default: '' },
+//     landmark: { type: String, default: '' },
+//     city: { type: String, default: '' },
+//     state: { type: String, default: '' },
+//     country: { type: String, default: '' },
+//     pincode: { type: String, default: '' },
+//   },
+//   selectedAddress: { type: String, default: '' },
+//   gender: { type: String, required: false },
+//   birthdate: {
+//     type: Date,
+//   },
+//   bio: {
+//     type: String,
+//     trim: true,
+//   },
+//   website: {
+//     type: String,
+//     trim: true,
+//   },
+//   profilePhoto: { type: String },
+//   wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
+//   cart: [
+//     {
+//       product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+//       quantity: { type: Number, default: 1 },
+//     },
+//   ],
+//   orders: [
+//     {
+//       type: mongoose.Schema.Types.ObjectId,
+//       ref: 'Order',
+//     },
+//   ],
+//   username: { type: String, unique: true },
+
+//   instagram: { type: String },
+
+//   youtube: { type: String },
+
+//   facebook: { type: String },
+
+//   linkdin: { type: String },
+
+//   artistDetails: { type: mongoose.Schema.Types.ObjectId, ref: 'ArtistDetails' },
+//   bankDetails: { type: mongoose.Schema.Types.ObjectId, ref: 'BankDetails' },
+//   artworklisting: { type: mongoose.Schema.Types.ObjectId, ref: 'Artwork' },
+//   businessProfile: { type: mongoose.Schema.Types.ObjectId, ref: 'BusinessProfile' },
+//   sellingdetailsartwork: { type: mongoose.Schema.Types.ObjectId, ref: 'SellDetailsAndArtwork' },
+//   taxlegalcompliance: { type: mongoose.Schema.Types.ObjectId, ref: 'TaxLegalCompliance' },
+
+
+//   agreements: [{ type: String }],
+
+//   verification: {
+//     type: {
+//       documentType: {
+//         type: String,
+//         enum: ['Aadhar Card', 'Driving License', 'Passport'],
+//         required: false,
+//       },
+//       documentNumber: {
+//         type: String,
+//         required: false,
+//         validate: {
+//           validator: function (value) {
+//             if (this.documentType === 'Aadhar Card') {
+//               return /^[2-9]{1}[0-9]{11}$/.test(value);
+//             } else if (this.documentType === 'Driving License') {
+//               return /^[A-Z]{2}-\d{2}-\d{8}$/.test(value);
+//             }
+//             else if (this.documentType === 'Passport') {
+//               return /^[A-Z][0-9]{7}$/.test(value);
+//             }
+
+//             return true;
+//           },
+//           message: props => `Invalid ${props.value} for ${props.documentType}`,
+//         },
+//       },
+//       documentFile: { type: String, required: false },
+//     },
+//     default: {},
+//   },
+
+//   status: { type: String, enum: ['Verified', 'Unverified', 'Rejected'], default: 'Unverified' },
+//   Rejcectcomment: { type: String }
+// });
+
+// const User = mongoose.model('User', userSchema);
+// module.exports = User;
+
+
 const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
 
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   lastName: { type: String, required: true },
   email: { type: String, required: false, unique: true, sparse: true },
-  phone: { type: String, unique: true, sparse: true, },
+  phone: { type: String, unique: true, sparse: true },
   password: { type: String, required: true },
   transactions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Transaction' }],
   blogCount: { type: Number, default: 0 },
@@ -12,7 +125,6 @@ const userSchema = new mongoose.Schema({
   role: { type: String, enum: ['super-admin', 'admin', 'artist', 'buyer', 'seller'], required: true, strictPopulate: false },
   userrole: { type: String },
   refreshToken: { type: String },
-
   resetPasswordOtp: { type: String },
   resetPasswordOtpExpiry: { type: Date },
   address: {
@@ -123,9 +235,47 @@ const userSchema = new mongoose.Schema({
     },
     default: {},
   },
-
   status: { type: String, enum: ['Verified', 'Unverified', 'Rejected'], default: 'Unverified' },
   Rejcectcomment: { type: String }
+});
+
+// Hash password before saving
+userSchema.pre('save', async function (next) {
+  if (this.isModified('password')) {
+    this.password = await bcrypt.hash(this.password, 10);
+  }
+  next();
+});
+
+
+async function createSuperAdmin() {
+  try {
+    const existingSuperAdmin = await User.findOne({ userType: 'Super-Admin' });
+    if (!existingSuperAdmin) {
+      const superAdmin = new User({
+        name: 'Super',
+        lastName: 'Admin',
+        email: 'admin@gmail.com',
+        password: '12345678',
+        userType: 'Super-Admin',
+        role: 'super-admin',
+        userrole: 'super-admin',
+        username: 'superadmin',
+        status: 'Verified'
+      });
+      await superAdmin.save();
+      console.log('Super Admin user created successfully');
+    } else {
+      console.log('Super Admin already exists');
+    }
+  } catch (error) {
+    console.error('Error creating Super Admin:', error);
+  }
+}
+
+
+mongoose.connection.once('open', () => {
+  createSuperAdmin();
 });
 
 const User = mongoose.model('User', userSchema);

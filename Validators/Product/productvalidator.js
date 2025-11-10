@@ -2,84 +2,142 @@ const Joi = require('joi');
 const mongoose = require('mongoose');
 
 const productValidator = Joi.object({
-
-  //------------------------------------Basic details------------------------------------//
-  productName: Joi.string().required().trim().messages({
+  // --------------------------- BASIC ---------------------------
+  productName: Joi.string().trim().required().messages({
     'string.empty': 'Product name is required',
-    'any.required': 'Product name is required'
+    'any.required': 'Product name is required',
   }),
-  userId: Joi.string().required().custom((value, helpers) => {
-    if (!mongoose.Types.ObjectId.isValid(value)) {
-      return helpers.error('any.invalid');
-    }
-    return value;
-  }).messages({
-    'string.empty': 'User ID is required',
-    'any.required': 'User ID is required',
-    'any.invalid': 'Invalid User ID format'
-  }),
+
+  userId: Joi.string()
+    .required()
+    .custom((value, helpers) => {
+      if (!mongoose.Types.ObjectId.isValid(value)) {
+        return helpers.error('any.invalid');
+      }
+      return value;
+    })
+    .messages({
+      'any.required': 'User ID is required',
+      'any.invalid': 'Invalid User ID format',
+    }),
+
   description: Joi.string().required().messages({
     'string.empty': 'Description is required',
-    'any.required': 'Description is required'
+    'any.required': 'Description is required',
   }),
-  targetedAudience: Joi.string().required().trim().messages({
+
+  targetedAudience: Joi.string().trim().required().messages({
     'string.empty': 'Targeted audience is required',
-    'any.required': 'Targeted audience is required'
+    'any.required': 'Targeted audience is required',
   }),
-  inspirationSource: Joi.string().required().trim().messages({
+
+  inspirationSource: Joi.string().trim().required().messages({
     'string.empty': 'Inspiration source is required',
-    'any.required': 'Inspiration source is required'
+    'any.required': 'Inspiration source is required',
   }),
+
   tags: Joi.array().items(Joi.string()).default([]),
 
+  // --------------------------- CATEGORIES ---------------------------
+  mainCategory: Joi.string().required().messages({
+    'any.required': 'Main category is required',
+  }),
+  category: Joi.string().required().messages({
+    'any.required': 'Category is required',
+  }),
+  subCategory: Joi.string().required().messages({
+    'any.required': 'Sub-category is required',
+  }),
 
-  //------------------------------------Artwork details------------------------------------//
+  productType: Joi.string().required().messages({
+    'any.required': 'Product type is required',
+  }),
 
+  editionNumber: Joi.when('productType', {
+    is: 'Limited',
+    then: Joi.number().integer().min(1).required().messages({
+      'number.min': 'Edition number must be at least 1',
+      'any.required': 'Edition number is required for limited edition',
+    }),
+    otherwise: Joi.number().integer().min(1).optional(),
+  }),
+
+  // --------------------------- ARTWORK ---------------------------
   medium: Joi.string().required().messages({
-    'string.empty': 'Medium is required',
     'any.required': 'Medium is required',
   }),
-  materials: Joi.array().items(Joi.string()).min(1).required().messages({
-    'array.min': 'At least one material must be specified',
-    'any.required': 'Materials are required',
-  }),
-  width: Joi.string().required().custom((value, helpers) => {
-    const num = parseFloat(value);
-    if (isNaN(num) || num <= 0) return helpers.error('number.base');
-    return num;
-  }).messages({
-    'any.required': 'Width is required',
-    'number.base': 'Width must be a positive number'
-  }),
-  height: Joi.string().required().custom((value, helpers) => {
-    const num = parseFloat(value);
-    if (isNaN(num) || num <= 0) return helpers.error('number.base');
-    return num;
-  }).messages({
-    'any.required': 'Height is required',
-    'number.base': 'Height must be a positive number'
-  }),
-  depth: Joi.string().required().custom((value, helpers) => {
-    const num = parseFloat(value);
-    if (isNaN(num) || num < 0) return helpers.error('number.base');
-    return num;
-  }).messages({
-    'any.required': 'Depth is required',
-    'number.base': 'Depth must be a non-negative number'
-  }),
-  weight: Joi.number().min(0).messages({
-    'number.min': 'Weight cannot be negative',
-  }),
+
+  // materials:  Joi.array().min(1)
+  //   .required()
+  //   .messages({
+  //     'array.min': 'At least one material is required',
+  //     'any.required': 'Materials are required',
+  //   }),
+
+  materials: Joi.alternatives()
+    .try(
+      Joi.array().items(Joi.string()).min(1),
+      Joi.string()
+    )
+    .custom((value) => {
+      if (typeof value === 'string') return [value];
+      return value;
+    })
+    .messages({
+      'array.min': 'At least one material is required',
+      'any.required': 'Materials are required',
+    })
+    .required(),
+
+
+  width: Joi.string()
+    .required()
+    .custom((v, h) => {
+      const n = parseFloat(v);
+      if (isNaN(n) || n <= 0) return h.error('number.base');
+      return n;
+    })
+    .messages({
+      'any.required': 'Width is required',
+      'number.base': 'Width must be a positive number',
+    }),
+
+  height: Joi.string()
+    .required()
+    .custom((v, h) => {
+      const n = parseFloat(v);
+      if (isNaN(n) || n <= 0) return h.error('number.base');
+      return n;
+    })
+    .messages({
+      'any.required': 'Height is required',
+      'number.base': 'Height must be a positive number',
+    }),
+
+  depth: Joi.string()
+    .required()
+    .custom((v, h) => {
+      const n = parseFloat(v);
+      if (isNaN(n) || n < 0) return h.error('number.base');
+      return n;
+    })
+    .messages({
+      'any.required': 'Depth is required',
+      'number.base': 'Depth must be a non-negative number',
+    }),
+
+  weight: Joi.number().min(0).optional(),
+
   printResolution: Joi.string()
     .trim()
     .allow('')
     .when('medium', {
-      is: Joi.string().valid('print', 'poster').insensitive(),
-      then: Joi.string().required().messages({
-        'string.empty': 'Print resolution is required for print or poster mediums',
-        'any.required': 'Print resolution is required for print or poster mediums',
+      is: Joi.string().valid('print', 'poster', 'Print and Poster').insensitive(),
+      then: Joi.required().messages({
+        'any.required': 'Print resolution is required for print/poster or Print and Poster ',
       }),
     }),
+
   year: Joi.number()
     .integer()
     .min(1900)
@@ -88,521 +146,311 @@ const productValidator = Joi.object({
     .messages({
       'number.min': 'Year must be 1900 or later',
       'number.max': 'Year cannot be in the future',
-      'any.required': 'Year of creation is required',
+      'any.required': 'Year is required',
     }),
-  editionType: Joi.string().required().messages({
-    'any.required': 'Edition type is required',
-  }),
+
+  editionType: Joi.string().required(),
+
   framing: Joi.string()
-    .valid('framed', 'unframed', 'rolled')
     .required()
     .messages({
       'any.only': 'Invalid framing option',
-      'any.required': 'Framing details are required',
+      'any.required': 'Framing is required',
     }),
+
   quantity: Joi.number().integer().min(1).required().messages({
     'number.min': 'Quantity must be at least 1',
     'any.required': 'Quantity is required',
   }),
-  hsnCode: Joi.string().trim().allow('').messages({
-    'string.empty': 'HSN Code cannot be empty if provided',
-  }),
-  surfaceType: Joi.string().trim().allow('').messages({
-    'string.empty': 'Surface type cannot be empty if provided',
-  }),
-  culturalRegion: Joi.string().trim().allow('').messages({
-    'string.empty': 'Cultural region cannot be empty if provided',
-  }),
-  biologicalMaterial: Joi.string().trim().allow('').messages({
-    'string.empty': 'Biological material cannot be empty if provided',
-  }),
+
+  hsnCode: Joi.string().trim().allow(''),
+  surfaceType: Joi.string().trim().allow(''),
+  culturalRegion: Joi.string().trim().allow(''),
+  biologicalMaterial: Joi.string().trim().allow(''),
+
   functionalUse: Joi.string()
-    .valid('yes', 'no')
     .required()
     .messages({
-      'any.only': 'Invalid functional use value',
+      'any.only': 'Functional use must be yes/no',
       'any.required': 'Functional use is required',
     }),
-  materialSource: Joi.string().trim().allow('').messages({
-    'string.empty': 'Material source cannot be empty if provided',
-  }),
-  craftTechnique: Joi.string().trim().allow('').messages({
-    'string.empty': 'Craft technique cannot be empty if provided',
-  }),
-  toolUsage: Joi.array().items(Joi.string()).messages({
-    'array.base': 'Tool usage must be an array of strings',
-  }),
+
+  materialSource: Joi.string().trim().allow(''),
+  craftTechnique: Joi.string().trim().allow(''),
+  toolUsage: Joi.array().items(Joi.string()).default([]),
+
   handmade: Joi.string()
-    .valid('yes', 'no')
     .required()
     .messages({
-      'any.only': 'Invalid handmade value',
+      'any.only': 'Handmade must be yes/no',
       'any.required': 'Handmade status is required',
     }),
-  isSigned: Joi.boolean().required().messages({
-    'any.required': 'Signature status is required',
-  }),
-  isResinCovered: Joi.boolean().default(false).messages({
-    'boolean.base': 'Resin coverage must be a boolean value',
-  }),
+
+  isSigned: Joi.boolean().required(),
+  isResinCovered: Joi.boolean().default(false),
+
   condition: Joi.string()
-    .valid('new', 'resale', 'pre_owned')
     .required()
     .messages({
-      'any.only': 'Invalid condition value',
+      'any.only': 'Invalid condition',
       'any.required': 'Condition is required',
     }),
+
   provenance: Joi.string()
     .trim()
     .allow('')
     .when('condition', {
-      is: 'resale',
-      then: Joi.string().required().messages({
-        'string.empty': 'Provenance is required for resale condition',
-        'any.required': 'Provenance is required for resale condition',
+      is: 'Resale',
+      then: Joi.required().messages({
+        'any.required': 'Provenance is required for resale',
       }),
     }),
 
-  //------------------------------------Image and Media------------------------------------//
-
-  iframeLink: Joi.string().uri().allow('').messages({
-    'string.uri': 'Please enter a valid URL for the iframe link'
-  }),
+  // --------------------------- IMAGES ---------------------------
+  iframeLink: Joi.string().allow(''),
   mainImage: Joi.string(),
   otherImages: Joi.array().items(Joi.string()).default([]),
 
-
-  //------------------------------------Pricing and details------------------------------------//
-  sellingPrice: Joi.number().min(0).required().messages({
-    'number.min': 'Selling price cannot be negative',
-    'any.required': 'Selling price is required'
-  }),
-
-  marketPrice: Joi.number().min(0).messages({
-    'number.min': 'Market price cannot be negative'
-  }),
-
-  discount: Joi.number().min(0).max(100).messages({
-    'number.min': 'Discount cannot be negative',
-    'number.max': 'Discount cannot exceed 100%'
-  }),
-  finalPrice: Joi.number().min(0).required().messages({
-    'number.min': 'Final price cannot be negative',
-    'any.required': 'Final price is required'
-  }),
-  offers: Joi.array().items(Joi.string().valid(
-    'festival',
-    'new_customer',
-    'bulk_purchase',
-    'artist_special'
-  )).default([]),
+  // --------------------------- PRICING ---------------------------
+  sellingPrice: Joi.number().min(0).required(),
+  marketPrice: Joi.number().min(0).optional(),
+  discount: Joi.number().min(0).max(100).optional(),
+  finalPrice: Joi.number().min(0).optional(),
 
   allowInstallments: Joi.boolean().default(false),
-
-  installmentDuration: Joi.string()
-    .when('allowInstallments', {
-      is: true,
-      then: Joi.required().messages({
-        'any.required': 'Installment duration is required when installments are allowed'
-      }),
-      otherwise: Joi.optional()
-    }),
+  installmentDuration: Joi.when('allowInstallments', {
+    is: true,
+    then: Joi.string().valid('Yearly', 'Lifetime').required(),
+    otherwise: Joi.forbidden(),
+  }),
 
   includeGst: Joi.boolean().default(false),
+  gstPercentage: Joi.number().min(0).max(100).default(0),
 
-  gstPercentage: Joi.number().min(0).max(100).default(0).messages({
-    'number.min': 'GST percentage cannot be negative',
-    'number.max': 'GST percentage cannot exceed 100'
-  }),
-  status: Joi.string().valid('Pending', 'Approved', 'Rejected').default('Pending'),
+  status: Joi.string()
+    .valid('Pending', 'Approved', 'Rejected', 'Drafted')
+    .default('Pending'),
 
-
-  //------------------------------------Shipping and Delivery------------------------------------//
-  shippingCharges: Joi.number().min(0).required().messages({
-    'number.min': 'Shipping charges cannot be negative',
-    'any.required': 'Shipping charges are required'
-  }),
-
-  handlingTime: Joi.string().required().messages({
-    'string.empty': 'Handling time is required',
-    'any.required': 'Handling time is required'
-  }),
-
-  estimatedDelivery: Joi.string().required().messages({
-    'string.empty': 'Estimated delivery time is required',
-    'any.required': 'Estimated delivery time is required'
-  }),
-  packagingType: Joi.string().required().messages({
-    'string.empty': 'Packaging type is required',
-    'any.required': 'Packaging type is required'
-  }),
+  // --------------------------- SHIPPING ---------------------------
+  shippingCharges: Joi.number().min(0).required(),
+  handlingTime: Joi.string().required(),
+  estimatedDelivery: Joi.string().required(),
+  packagingType: Joi.string().required(),
   insuranceCoverage: Joi.boolean().default(false),
   selfShipping: Joi.boolean().default(false),
-  quantity: Joi.number().integer().min(1).required().messages({
-    'number.min': 'Quantity must be at least 1',
-    'any.required': 'Quantity is required'
-  }),
-  hsnCode: Joi.string().trim().allow('').messages({
-    'string.empty': 'HSN Code cannot be empty'
-  }),
-  surfaceType: Joi.string().trim().allow('').messages({
-    'string.empty': 'Surface type cannot be empty'
-  }),
-  isSigned: Joi.boolean().required().messages({
-    'any.required': 'Signature status is required'
-  }),
-  condition: Joi.string().valid('new', 'resale', 'pre_owned').required().messages({
-    'any.only': 'Invalid condition value',
-    'any.required': 'Condition is required'
-  }),
-  provenance: Joi.string().trim().allow('').messages({
-    'string.empty': 'Provenance cannot be empty'
-  }),
-
 
   returnPolicy: Joi.string()
-    .valid('returnable', 'non-returnable')
-    .required()
-    .messages({
-      'any.only': 'Return policy must be either returnable or non-returnable',
-      'any.required': 'Return policy is required'
-    }),
+    .valid('Returnable', 'Non-returnable')
+    .required(),
+
   exportRestriction: Joi.boolean().default(false),
 
-
-
-  //------------------------------------Payout and Details------------------------------------//
+  // --------------------------- PAYOUT ---------------------------
   autoCancelOrder: Joi.boolean().default(false),
   giftWrapping: Joi.boolean().default(false),
-  giftWrappingCustomMessage: Joi.string().trim().allow('').default('').messages({
-    'string.empty': 'Custom message cannot be empty'
-  }),
+  giftWrappingCustomMessage: Joi.string().trim().allow('').default(''),
   giftWrappingCost: Joi.boolean().default(false),
-  giftWrappingCostAmount: Joi.number().min(0).default(0).when('giftWrappingCost', {
+  giftWrappingCostAmount: Joi.when('giftWrappingCost', {
     is: true,
-    then: Joi.number().min(0).required().messages({
-      'number.min': 'Wrapping cost cannot be negative',
-      'any.required': 'Wrapping cost amount is required when gift wrapping cost is enabled'
-    }),
-    otherwise: Joi.number().min(0).default(0)
-  }),
-  // Legal & Compliance validations
-   //----------------------------------------Legal & Compliance validations----------------------------------//
-   ownershipConfirmation: Joi.boolean().required().messages({
-     'any.required': 'Ownership confirmation is required'
-   }),
-   copyrightRights: Joi.string()
-     .valid('full_rights', 'personal_use', 'no_rights')
-     .required()
-     .messages({
-       'any.only': 'Invalid copyright rights option',
-       'any.required': 'Copyright rights are required'
-     }),
-   prohibitedItems: Joi.boolean().required().messages({
-     'any.required': 'Prohibited items confirmation is required'
-   }),
-   artistSignature: Joi.boolean().required().messages({
-     'any.required': 'Artist signature status is required'
-   }),
-   signatureType: Joi.string().trim().allow(''),
- 
-   // Certificate of Authenticity (COA)
-   coaAvailable: Joi.boolean().required().messages({
-     'any.required': 'COA availability is required'
-   }),
-   certificateType: Joi.string()
-     .valid('artist_signed', 'third_party', 'museum', 'gallery')
-     .when('coaAvailable', {
-       is: true,
-       then: Joi.string().required().messages({
-         'any.required': 'Certificate type is required when COA is available'
-       })
-     }),
-   issuerName: Joi.string().trim().when('coaAvailable', {
-     is: true,
-     then: Joi.string().required().messages({
-       'string.empty': 'Issuer name is required when COA is available',
-       'any.required': 'Issuer name is required when COA is available'
-     })
-   }),
-   verificationNumber: Joi.string().trim().when('coaAvailable', {
-     is: true,
-     then: Joi.string().required().messages({
-       'string.empty': 'Verification number is required when COA is available',
-       'any.required': 'Verification number is required when COA is available'
-     })
-   }),
-   certificateFormat: Joi.string()
-     .valid('digital', 'physical')
-     .default('digital'),
- 
-   // File uploads
-   certificateFile: Joi.string(),
-   coaFile: Joi.string(),
- 
-   // License & Usage Rights
-   commercialUse: Joi.string().valid('yes', 'no').default('no').messages({
-     'any.only': 'Commercial use must be either "yes" or "no"'
-   }),
-   royaltyTerms: Joi.string().trim().allow(''),
-   ethicalSourcing: Joi.boolean().default(false),
-
-  mainCategory: Joi.string().required().messages({
-    'string.empty': 'Main category is required',
-    'any.required': 'Main category is required'
-  }),
-  category: Joi.string().required().messages({
-    'string.empty': 'Category is required',
-    'any.required': 'Category is required'
-  }),
-  subCategory: Joi.string().required().messages({
-    'string.empty': 'Subcategory is required',
-    'any.required': 'Subcategory is required'
-  }),
-  productType: Joi.string()
-    .valid('original', 'limited', 'open', 'nft')
-    .required()
-    .messages({
-      'any.only': 'Invalid product type',
-      'any.required': 'Product type is required'
-    }),
-  editionNumber: Joi.when('productType', {
-    is: 'limited',
-    then: Joi.number().integer().min(1).required().messages({
-      'number.base': 'Edition number must be a number',
-      'number.min': 'Edition number must be at least 1',
-      'any.required': 'Edition number is required for limited edition products'
-    }),
-    otherwise: Joi.number().integer().min(1).optional()
+    then: Joi.number().min(0).required(),
+    otherwise: Joi.number().min(0).default(0),
   }),
 
-  // NFT Details (all optional)
-    // NFT Details validations
-    blockchainNetwork: Joi.string().trim()
-      .when('productType', {
-        is: 'nft',
-        then: Joi.string().trim().required().messages({
-          'string.empty': 'Blockchain network is required for NFTs',
-          'any.required': 'Blockchain network is required for NFTs'
-        }),
-        otherwise: Joi.string().trim().allow('')
-      }),
-    smartContractAddress: Joi.string().trim()
-      .when('productType', {
-        is: 'nft',
-        then: Joi.string().trim().required().messages({
-          'string.empty': 'Smart contract address is required for NFTs',
-          'any.required': 'Smart contract address is required for NFTs'
-        }),
-        otherwise: Joi.string().trim().allow('')
-      }),
-    tokenStandard: Joi.string().trim()
-      .when('productType', {
-        is: 'nft',
-        then: Joi.string().trim().required().messages({
-          'string.empty': 'Token standard is required for NFTs',
-          'any.required': 'Token standard is required for NFTs'
-        }),
-        otherwise: Joi.string().trim().allow('')
-      }),
-    tokenId: Joi.string().trim()
-      .when('productType', {
-        is: 'nft',
-        then: Joi.string().trim().required().messages({
-          'string.empty': 'Token ID is required for NFTs',
-          'any.required': 'Token ID is required for NFTs'
-        }),
-        otherwise: Joi.string().trim().allow('')
-      }),
-    walletAddress: Joi.string().trim()
-      .when('productType', {
-        is: 'nft',
-        then: Joi.string().trim().required().messages({
-          'string.empty': 'Wallet address is required for NFTs',
-          'any.required': 'Wallet address is required for NFTs'
-        }),
-        otherwise: Joi.string().trim().allow('')
-      }),
-    royaltyPercentage: Joi.alternatives().try(
-      Joi.number().min(0).max(50),
-      Joi.string().allow('').regex(/^\d*\.?\d+$/)
-    )
-      .when('productType', {
-        is: 'nft',
-        then: Joi.required().messages({
-          'alternatives.types': 'Royalty percentage must be a number between 0 and 50',
-          'number.min': 'Royalty percentage cannot be negative',
-          'number.max': 'Royalty percentage cannot exceed 50%',
-          'any.required': 'Royalty percentage is required for NFTs'
-        }),
-        otherwise: Joi.optional()
-      }),
-    mintingType: Joi.string().valid('pre_minted', 'lazy')
-      .when('productType', {
-        is: 'nft',
-        then: Joi.required().messages({
-          'any.required': 'Minting type is required for NFTs',
-          'any.only': 'Minting type must be either pre_minted or lazy'
-        }),
-        otherwise: Joi.string().trim().allow('')
-      }),
-    licenseType: Joi.string().valid('personal', 'limited', 'full', 'exclusive')
-      .when('productType', {
-        is: 'nft',
-        then: Joi.required().messages({
-          'any.required': 'License type is required for NFTs',
-          'any.only': 'License type must be one of personal, limited, full, or exclusive'
-        }),
-        otherwise: Joi.string().trim().allow('')
-      }),
-    ipfsStorage: Joi.boolean().default(false),
-    unlockableContent: Joi.boolean().default(false),
-    partOfCollection: Joi.boolean().default(false)
-      .when('productType', {
-        is: 'nft',
-        then: Joi.required().messages({
-          'any.required': 'Part of collection is required for NFTs'
-        }),
-        otherwise: Joi.optional()
-      }),
-    collectionName: Joi.when('partOfCollection', {
-      is: true,
-      then: Joi.string().trim().required().messages({
-        'string.empty': 'Collection name is required when part of collection',
-        'any.required': 'Collection name is required when part of collection'
-      }),
-      otherwise: Joi.string().trim().allow('')
-    }),
-    editionSize: Joi.when('partOfCollection', {
-      is: true,
-      then: Joi.number().integer().min(1).required().messages({
-        'number.base': 'Edition size must be a number',
-        'number.min': 'Edition size must be at least 1',
-        'any.required': 'Edition size is required when part of collection'
-      }),
-      otherwise: Joi.number().integer().min(1).optional()
-    }),
-    rarityType: Joi.string().valid('common', 'rare', 'epic', 'legendary')
-      .when('productType', {
-        is: 'nft',
-        then: Joi.required().messages({
-          'any.required': 'Rarity type is required for NFTs',
-          'any.only': 'Rarity type must be one of common, rare, epic, or legendary'
-        }),
-        otherwise: Joi.string().trim().allow('')
-      }),
-    traits: Joi.string().trim()
-      .when('productType', {
-        is: 'nft',
-        then: Joi.string().trim().required().messages({
-          'string.empty': 'Traits are required for NFTs',
-          'any.required': 'Traits are required for NFTs'
-        }),
-        otherwise: Joi.string().trim().allow('')
-      }),
-  //--------------------------------------Antique & Vintage validations------------------------------------------------//
+  // --------------------------- LEGAL ---------------------------
+  ownershipConfirmation: Joi.boolean().required(),
+  copyrightRights: Joi.string()
+    .valid('Buyer has full reproduction/resale rights', 'Buyer can use personally but not reproduce/resell', 'No reproduction/resale rights granted')
+    .required(),
 
-  originRegion: Joi.string()
-  .valid('france', 'japan', 'india', 'china', 'uk', 'usa')
-  .when('mainCategory', {
-    is: 'Antiques & Vintage',
-    then: Joi.required().messages({
-      'any.required': 'Origin/Region is required for antiques',
-      'any.only': 'Invalid origin/region value'
-    }),
-    otherwise: Joi.optional()
-  }),
-periodEra: Joi.string()
-  .when('mainCategory', {
-    is: 'Antiques & Vintage',
-    then: Joi.required().messages({
-      'any.required': 'Period/Era is required for antiques',
-      'any.only': 'Invalid period/era value'
-    }),
-    otherwise: Joi.optional()
-  }),
-antiqueCondition: Joi.string()
-  .valid('new', 'excellent', 'good', 'fair', 'poor')
-  .when('mainCategory', {
-    is: 'Antiques & Vintage',
-    then: Joi.required().messages({
-      'any.required': 'Condition is required for antiques',
-      'any.only': 'Invalid condition value'
-    }),
-    otherwise: Joi.optional()
-  }),
-conservationStatus: Joi.string()
-  .valid('restored', 'original')
-  .when('mainCategory', {
-    is: 'Antiques & Vintage',
-    then: Joi.required().messages({
-      'any.required': 'Conservation Status is required for antiques',
-      'any.only': 'Invalid conservation status value'
-    }),
-    otherwise: Joi.optional()
-  }),
-restorationHistory: Joi.string().trim().allow(''),
-restorationDocumentation: Joi.string().trim().allow(''),
-provenanceHistory: Joi.string().trim().allow(''),
-culturalSignificance: Joi.string().trim().allow(''),
-appraisalDetails: Joi.string().trim().allow(''),
-engravingMarkings: Joi.string().trim().allow(''),
-patinaWear: Joi.string().trim().allow(''),
-isHandmade: Joi.boolean()
-  .default(false)
-  .when('mainCategory', {
-    is: 'Antiques & Vintage',
-    then: Joi.required().messages({
-      'any.required': 'Handmade status is required for antiques'
-    }),
-    otherwise: Joi.optional()
-  }),
-originalReproduction: Joi.string()
-  .valid('original', 'replica', 'reproduction')
-  .when('mainCategory', {
-    is: 'Antiques & Vintage',
-    then: Joi.required().messages({
-      'any.required': 'Original/Reproduction is required for antiques',
-      'any.only': 'Invalid original/reproduction value'
-    }),
-    otherwise: Joi.optional()
-  }),
-museumExhibitionHistory: Joi.string().trim().allow(''),
-maintenanceRequired: Joi.string()
-  .valid('yes', 'no')
-  .when('mainCategory', {
-    is: 'Antiques & Vintage',
-    then: Joi.required().messages({
-      'any.required': 'Maintenance requirement is required for antiques',
-      'any.only': 'Invalid maintenance requirement value'
-    }),
-    otherwise: Joi.optional()
-  }),
-customEngravingAvailable: Joi.boolean().default(false),
-certification: Joi.string().trim().allow(''),
+  prohibitedItems: Joi.boolean().required(),
+  artistSignature: Joi.boolean().required(),
+  signatureType: Joi.string().trim().allow(''),
 
+  coaAvailable: Joi.boolean().required(),
+  certificateType: Joi.when('coaAvailable', {
+    is: true,
+    then: Joi.string()
+      .valid('Artist Signed',
+        'Third-Party Certified',
+        'Museum-Approved',
+        'Gallery-Certified')
+      .required(),
+  }),
+  issuerName: Joi.when('coaAvailable', { is: true, then: Joi.string().required() }),
+  verificationNumber: Joi.when('coaAvailable', {
+    is: true,
+    then: Joi.string().required(),
+  }),
+  certificateFormat: Joi.string().valid('digital', 'physical').default('digital'),
 
+  certificateFile: Joi.string(),
+  coaFile: Joi.string(),
 
-  addressLine1: Joi.string().trim().allow('').optional().messages({
-    'string.empty': 'Address line 1 must be a valid string or empty'
+  commercialUse: Joi.string().valid('Yes', 'No').default('No'),
+  royaltyTerms: Joi.string().trim().allow(''),
+  ethicalSourcing: Joi.boolean().default(false),
+
+  // --------------------------- NFT ---------------------------
+  blockchainNetwork: Joi.when('productType', {
+    is: 'nft',
+    then: Joi.string().trim().required(),
+    otherwise: Joi.string().trim().allow(''),
   }),
-  addressLine2: Joi.string().trim().allow('').optional().messages({
-    'string.empty': 'Address line 2 must be a valid string or empty'
+  smartContractAddress: Joi.when('productType', {
+    is: 'nft',
+    then: Joi.string().trim().required(),
+    otherwise: Joi.string().trim().allow(''),
   }),
-  landmark: Joi.string().trim().allow('').optional(),
-  city: Joi.string().trim().allow('').optional().messages({
-    'string.empty': 'City must be a valid string or empty'
+  tokenStandard: Joi.when('productType', {
+    is: 'nft',
+    then: Joi.string().trim().required(),
+    otherwise: Joi.string().trim().allow(''),
   }),
-  state: Joi.string().trim().allow('').optional().messages({
-    'string.empty': 'State must be a valid string or empty'
+  tokenId: Joi.when('productType', {
+    is: 'nft',
+    then: Joi.string().trim().required(),
+    otherwise: Joi.string().trim().allow(''),
   }),
-  country: Joi.string().trim().allow('').optional().messages({
-    'string.empty': 'Country must be a valid string or empty'
+  walletAddress: Joi.when('productType', {
+    is: 'nft',
+    then: Joi.string().trim().required(),
+    otherwise: Joi.string().trim().allow(''),
   }),
-  pincode: Joi.string().trim().allow('').optional().messages({
-    'string.empty': 'Pincode must be a valid string or empty'
+  royaltyPercentage: Joi.when('productType', {
+    is: 'nft',
+    then: Joi.number().min(0).max(50).required(),
+    otherwise: Joi.number().min(0).max(50).optional(),
+  }),
+  mintingType: Joi.when('productType', {
+    is: 'nft',
+    then: Joi.string().valid('pre_minted', 'lazy').required(),
+    otherwise: Joi.string().allow(''),
+  }),
+  licenseType: Joi.when('productType', {
+    is: 'nft',
+    then: Joi.string()
+      .valid('personal', 'limited', 'full', 'exclusive')
+      .required(),
+    otherwise: Joi.string().allow(''),
   }),
 
-});
+  ipfsStorage: Joi.boolean().default(false),
+  // --------------------------- IPFS CONDITIONAL ---------------------------
+  ipfsLink: Joi.when('ipfsStorage', {
+    is: true,
+    then: Joi.string().trim().required()
+      .messages({ 'string.uri': 'IPFS link must be a valid ' }),
+    otherwise: Joi.string().trim().allow('').optional(),
+  }),
+
+  softwareVersion: Joi.when('ipfsStorage', {
+    is: true,
+    then: Joi.string().trim().required(),
+    otherwise: Joi.string().trim().allow('').optional(),
+  }),
+
+  fileFormat: Joi.when('ipfsStorage', {
+    is: true,
+    then: Joi.string().trim().uppercase().required(),
+    otherwise: Joi.string().trim().allow('').optional(),
+  }),
+
+  unlockableContent: Joi.boolean().default(false),
+
+  // --------------------------- UNLOCKABLE CONTENT ---------------------------
+  unlockableContentLink: Joi.when('unlockableContent', {
+    is: true,
+    then: Joi.string().trim().required()
+      .messages({ 'string.uri': 'Unlockable content link must be a valid' }),
+    otherwise: Joi.string().trim().allow('').optional(),
+  }),
+  partOfCollection: Joi.boolean().default(false),
+  collectionName: Joi.when('partOfCollection', {
+    is: true,
+    then: Joi.string().trim().required(),
+    otherwise: Joi.string().trim().allow(''),
+  }),
+  editionSize: Joi.when('partOfCollection', {
+    is: true,
+    then: Joi.number().integer().min(1).required(),
+    otherwise: Joi.number().integer().min(1).optional(),
+  }),
+  rarityType: Joi.when('productType', {
+    is: 'nft',
+    then: Joi.string()
+      .valid('common', 'rare', 'epic', 'legendary')
+      .required(),
+    otherwise: Joi.string().allow(''),
+  }),
+  traits: Joi.when('productType', {
+    is: 'nft',
+    then: Joi.string().trim().required(),
+    otherwise: Joi.string().trim().allow(''),
+  }),
+
+  // --------------------------- ANTIQUES ---------------------------
+  originRegion: Joi.when('mainCategory', {
+    is: 'Antiques & Vintage',
+    then: Joi.string()
+      .valid('france', 'japan', 'india', 'china', 'uk', 'usa')
+      .required(),
+    otherwise: Joi.string().allow(''),
+  }),
+  periodEra: Joi.when('mainCategory', {
+    is: 'Antiques & Vintage',
+    then: Joi.string().optional(),
+    otherwise: Joi.string().allow(''),
+  }),
+  antiqueCondition: Joi.when('mainCategory', {
+    is: 'Antiques & Vintage',
+    then: Joi.string()
+      .valid('new', 'excellent', 'good', 'fair', 'poor')
+      .optional(),
+    otherwise: Joi.string().allow(''),
+  }),
+  conservationStatus: Joi.when('mainCategory', {
+    is: 'Antiques & Vintage',
+    then: Joi.string().valid('restored', 'original').optional(),
+    otherwise: Joi.string().allow(''),
+  }),
+
+  restorationHistory: Joi.string().trim().allow(''),
+  restorationDocumentation: Joi.string().trim().allow(''),
+  provenanceHistory: Joi.string().trim().allow(''),
+  culturalSignificance: Joi.string().trim().allow(''),
+  appraisalDetails: Joi.string().trim().allow(''),
+  engravingMarkings: Joi.string().trim().allow(''),
+  patinaWear: Joi.string().trim().allow(''),
+
+  isHandmade: Joi.when('mainCategory', {
+    is: 'Antiques & Vintage',
+    then: Joi.boolean().required(),
+    otherwise: Joi.boolean().default(false),
+  }),
+  originalReproduction: Joi.when('mainCategory', {
+    is: 'Antiques & Vintage',
+    then: Joi.string()
+      .valid('original', 'replica', 'reproduction')
+      .required(),
+    otherwise: Joi.string().allow(''),
+  }),
+  museumExhibitionHistory: Joi.string().trim().allow(''),
+  maintenanceRequired: Joi.when('mainCategory', {
+    is: 'Antiques & Vintage',
+    then: Joi.string().valid('yes', 'no').required(),
+    otherwise: Joi.string().allow(''),
+  }),
+  customEngravingAvailable: Joi.boolean().default(false),
+  certification: Joi.string().trim().allow(''),
+
+  // --------------------------- ADDRESS ---------------------------
+  addressLine1: Joi.string().trim().allow(''),
+  addressLine2: Joi.string().trim().allow(''),
+  landmark: Joi.string().trim().allow(''),
+  city: Joi.string().trim().allow(''),
+  state: Joi.string().trim().allow(''),
+  country: Joi.string().trim().allow(''),
+  pincode: Joi.string().trim().allow(''),
+}).options({ stripUnknown: true });
 
 module.exports = productValidator;

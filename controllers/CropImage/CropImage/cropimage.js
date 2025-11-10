@@ -4,191 +4,163 @@ const fs = require("fs");
 const path = require("path");
 const Product = require("../../../Models/Products");
 const productValidator = require("../../../Validators/Product/productvalidator");
-const nodemailer = require("nodemailer");
-const EmailSetting = require("../../../Models/EmailSetting");
 const User = require("../../../Models/usermode");
-const MainCategory = require("../../../Models/MainCategory");
-const Category = require("../../../Models/Category");
-const SubCategory = require("../../../Models/SubCategory");
 
 const addProduct = async (req, res) => {
   try {
-    const { error, value } = productValidator.validate(req.body);
 
-    if (error) {
-      if (req.files && req.files["images"]) {
-        req.files["images"].forEach((file) => {
-          if (fs.existsSync(file.path)) {
-            fs.unlinkSync(file.path);
-          }
+    if (req.body.status !== "Drafted") {
+      const { error, value } = productValidator.validate(req.body, { abortEarly: false });
+      if (error) {
+        deleteUploadedFiles(req.files);
+        return res.status(400).json({
+          message: "Validation error",
+          details: error.details.map(d => d.message),
         });
       }
-      return res.status(400).json({
-        message: "Validation error",
-        details: error.details.map((d) => d.message),
-      });
+      req.body = value;
     }
 
-    const productData = {
-      ...value,
-      //--------------------------------------------------Basic Details------------------------------------//
-      userId: value.userId,
-      mainCategory: value.mainCategory,
-      category: value.category,
-      subCategory: value.subCategory,
-      productType: value.productType,
-      editionNumber:
-        value.productType === "Limited Edition" ? value.editionNumber : undefined,
-      targetedAudience: value.targetedAudience,
-      inspirationSource: value.inspirationSource,
 
-      //--------------------------------------------------Artwork Details------------------------------------//
-
-      dimensions: {
-        width: value.width ? parseFloat(value.width) : 0,
-        height: value.height ? parseFloat(value.height) : 0,
-        depth: value.depth ? parseFloat(value.depth) : 0,
-      },
-      weight: value.weight ? parseFloat(value.weight) : undefined,
-
-    //--------------------------------------------------Shipping and Delivery------------------------------------// 
-      shippingCharges: value.shippingCharges,
-      estimatedDelivery: value.estimatedDelivery,
-      packagingType: value.packagingType,
-      insuranceCoverage: value.insuranceCoverage || false,
-      selfShipping: value.selfShipping || false,
-      quantity: value.quantity,
-      hsnCode: value.hsnCode || undefined,
-      surfaceType: value.surfaceType || undefined,
-      isSigned: value.isSigned,
-      condition: value.condition,
-      provenance: value.provenance || undefined,
-
-      autoCancelOrder: value.autoCancelOrder || false,
-      giftWrapping: value.giftWrapping || false,
-      giftWrappingCustomMessage: value.giftWrappingCustomMessage || "",
-      giftWrappingCost: value.giftWrappingCost || false,
-      giftWrappingCostAmount: value.giftWrappingCost
-        ? value.giftWrappingCostAmount
-        : 0,
-
-      // NFT Details
-      blockchainNetwork: value.blockchainNetwork || undefined,
-      smartContractAddress: value.smartContractAddress || undefined,
-      tokenStandard: value.tokenStandard || undefined,
-      tokenId: value.tokenId || undefined,
-      walletAddress: value.walletAddress || undefined,
-      royaltyPercentage: value.royaltyPercentage || undefined,
-      mintingType: value.mintingType || undefined,
-      licenseType: value.licenseType || undefined,
-      ipfsStorage: value.ipfsStorage || false,
-      unlockableContent: value.unlockableContent || false,
-      partOfCollection: value.partOfCollection || false,
-      collectionName: value.partOfCollection ? value.collectionName : undefined,
-      editionSize: value.partOfCollection
-        ? parseInt(value.editionSize)
-        : undefined,
-      rarityType: value.rarityType || undefined,
-      traits: value.traits || undefined,
-
-      originRegion: value.originRegion || undefined,
-      periodEra: value.periodEra || undefined,
-      antiqueCondition: value.antiqueCondition || undefined,
-      restorationHistory: value.restorationHistory || undefined,
-      provenanceHistory: value.provenanceHistory || undefined,
-      engravingMarkings: value.engravingMarkings || undefined,
-      patinaWear: value.patinaWear || undefined,
-      isHandmade: value.isHandmade || false,
-      originalReproduction: value.originalReproduction || undefined,
-      museumExhibitionHistory: value.museumExhibitionHistory || undefined,
-      customEngravingAvailable: value.customEngravingAvailable || false,
-
-      //Address Field
-
-      addressLine1: value.addressLine1 || undefined,
-      addressLine2: value.addressLine2 || undefined,
-      landmark: value.landmark || undefined,
-      city: value.city || undefined,
-      state: value.state || undefined,
-      country: value.country || undefined,
-      pincode: value.pincode || undefined,
-      // Legal & Compliance fields
-      ownershipConfirmation: value.ownershipConfirmation,
-      copyrightRights: value.copyrightRights,
-      prohibitedItems: value.prohibitedItems,
-      artistSignature: value.artistSignature,
-      signatureType: value.signatureType || undefined,
-      coaAvailable: value.coaAvailable,
-      certificateFormat: value.certificateFormat || "digital",
-
-      certificateFile: req.files["certificateFile"]
-        ? `/uploads/certificates/${req.files["certificateFile"][0].filename}`
-        : undefined,
-      coaFile: req.files["coaFile"]
-        ? `/uploads/coa/${req.files["coaFile"][0].filename}`
-        : undefined,
-      restorationDocumentation:req.files["restorationDocumentation"]
-           ? `/uploads/restorationDocumentation/${req.files["restorationDocumentation"][0].filename}`
-        : undefined,
-        certification:req.files["certification"]
-           ? `/uploads/certification/${req.files["certification"][0].filename}`
-        : undefined,
-
-      installmentDuration: value.allowInstallments
-        ? value.installmentDuration || []
-        : [],
+    const toNumber = (val, fallback = 0) => {
+      const n = parseFloat(val);
+      return isNaN(n) ? fallback : n;
     };
 
-    if (value.coaAvailable) {
-      productData.certificateType = value.certificateType;
-      productData.issuerName = value.issuerName;
-      productData.verificationNumber = value.verificationNumber;
+
+    const toInt = (val, fallback = 0) => {
+      const n = parseInt(val);
+      return isNaN(n) ? fallback : n;
+    };
+
+    const productData = {
+      ...req.body,
+
+      // Basic
+      userId: req.body.userId,
+      mainCategory: req.body.mainCategory,
+      category: req.body.category,
+      subCategory: req.body.subCategory,
+      productType: req.body.productType || [],
+      editionNumber: req.body.productType === "Limited Edition" ? toInt(req.body.editionNumber, undefined) : undefined,
+
+      // Artwork Details
+      dimensions: {
+        width: toNumber(req.body.width, 0),
+        height: toNumber(req.body.height, 0),
+        depth: toNumber(req.body.depth, 0),
+      },
+      weight: toNumber(req.body.weight, 0),
+
+      // Critical Enums (Fixed)
+      framing: req.body.framing,
+      functionalUse: req.body.functionalUse,
+      handmade: req.body.handmade,
+      condition: req.body.condition,
+      returnPolicy: req.body.returnPolicy || 'Non-returnable',
+      copyrightRights: req.body.copyrightRights || 'No reproduction/resale rights granted',
+      commercialUse: req.body.commercialUse || 'No',
+
+
+      editionSize: (() => {
+        if (!req.body.partOfCollection) return 1;
+        const size = toInt(req.body.editionSize, 1);
+        return size >= 1 ? size : 1;
+      })(),
+
+      // Images
+      mainImage: req.files?.images?.[0]
+        ? `/uploads/productImage/${req.files.images[0].filename}`
+        : undefined,
+      otherImages: req.files?.images?.slice(1).map(f => `/uploads/productImage/${f.filename}`) || [],
+
+      // Files
+      certificateFile: req.files?.certificateFile?.[0]
+        ? `/uploads/certificates/${req.files.certificateFile[0].filename}`
+        : undefined,
+      coaFile: req.files?.coaFile?.[0]
+        ? `/uploads/coa/${req.files.coaFile[0].filename}`
+        : undefined,
+      restorationDocumentation: req.files?.restorationDocumentation?.[0]
+        ? `/uploads/restorationDocumentation/${req.files.restorationDocumentation[0].filename}`
+        : undefined,
+      certification: req.files?.certification?.[0]
+        ? `/uploads/certification/${req.files.certification[0].filename}`
+        : undefined,
+
+      // Pricing
+      sellingPrice: toNumber(req.body.sellingPrice),
+      marketPrice: toNumber(req.body.marketPrice),
+      discount: toNumber(req.body.discount, 0),
+      finalPrice: null, // Will be calculated
+
+
+      // Shipping
+      shippingCharges: toNumber(req.body.shippingCharges, 0),
+      insuranceCoverage: req.body.insuranceCoverage === true || req.body.insuranceCoverage === 'true',
+      selfShipping: req.body.selfShipping === true || req.body.selfShipping === 'true',
+
+      // Gift
+      giftWrapping: req.body.giftWrapping === true || req.body.giftWrapping === 'true',
+      giftWrappingCost: req.body.giftWrappingCost === true || req.body.giftWrappingCost === 'true',
+      giftWrappingCostAmount: toNumber(req.body.giftWrappingCostAmount, 0),
+
+      // Legal
+      ownershipConfirmation: req.body.ownershipConfirmation === true || req.body.ownershipConfirmation === 'true',
+      artistSignature: req.body.artistSignature === true || req.body.artistSignature === 'true',
+      coaAvailable: req.body.coaAvailable === true || req.body.coaAvailable === 'true',
+      prohibitedItems: req.body.prohibitedItems === true || req.body.prohibitedItems === 'true',
+
+
+      // NFT
+      partOfCollection: req.body.partOfCollection === true || req.body.partOfCollection === 'true',
+      collectionName: req.body.partOfCollection ? req.body.collectionName : undefined,
+      ipfsStorage: req.body.ipfsStorage === true || req.body.ipfsStorage === 'true',
+      unlockableContent: req.body.unlockableContent === true || req.body.unlockableContent === 'true',
+
+      // Address
+      addressLine1: req.body.addressLine1 || undefined,
+      addressLine2: req.body.addressLine2 || undefined,
+      landmark: req.body.landmark || undefined,
+      city: req.body.city || undefined,
+      state: req.body.state || undefined,
+      country: req.body.country || undefined,
+      pincode: req.body.pincode || undefined,
+    };
+
+    // COA Details
+    if (productData.coaAvailable) {
+      productData.certificateType = req.body.certificateType;
+      productData.issuerName = req.body.issuerName;
+      productData.verificationNumber = req.body.verificationNumber;
+      productData.certificateFormat = req.body.certificateFormat || 'digital';
     }
 
-    //--------------------------------------------------Image And media------------------------------------// 
 
-    if (req.files && req.files["images"] && req.files["images"].length > 0) {
-      productData.mainImage = `/uploads/productImage/${req.files["images"][0].filename}`;
-
-      if (req.files["images"].length > 1) {
-        productData.otherImages = req.files["images"]
-          .slice(1)
-          .map((file) => `/uploads/productImage/${file.filename}`);
-      }
-    }
-
-    if (!productData.finalPrice && productData.sellingPrice) {
+    if (productData.sellingPrice) {
       const discount = productData.discount || 0;
-      productData.finalPrice = productData.sellingPrice * (1 - discount / 100);
+      productData.finalPrice = Math.round(productData.sellingPrice * (1 - discount / 100) * 100) / 100;
     }
 
     const newProduct = new Product(productData);
     const savedProduct = await newProduct.save();
 
-    await sendProductCreationEmails(savedProduct, req.files);
-    // await sendProductCreationEmails(savedProduct, req.files);
-
     res.status(201).json({
-      message: "Product added successfully",
+      message: req.body.status === "Drafted" ? "Product drafted successfully" : "Product added successfully",
       data: savedProduct,
     });
+
   } catch (error) {
     console.error("Error adding product:", error);
-    if (req.files) {
-      Object.values(req.files).forEach((files) => {
-        files.forEach((file) => {
-          if (fs.existsSync(file.path)) {
-            fs.unlinkSync(file.path);
-          }
-        });
-      });
-    }
-    if (error.code === 11000) {
-      return res.status(400).json({
-        message: "Duplicate key error",
-        details: ["This token ID already exists for the given smart contract"],
-      });
-    }
+    deleteUploadedFiles(req.files);
+
+    // if (error.code === 11000) {
+    //   return res.status(400).json({
+    //     message: "Duplicate token ID",
+    //     details: ["This token ID already exists"],
+    //   });
+    // }
+
     res.status(500).json({
       message: "Error while adding product",
       error: error.message,
@@ -618,5 +590,15 @@ const sendAdminNotificationEmail = async (transporter, emailSettings, admins, us
     console.error("Error sending admin notification email:", error);
   }
 };
+
+function deleteUploadedFiles(files) {
+  if (!files) return;
+  Object.values(files).flat().forEach(file => {
+    const filePath = file.path;
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  });
+}
 
 module.exports = addProduct;

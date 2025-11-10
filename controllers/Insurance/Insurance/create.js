@@ -1,199 +1,100 @@
-// const InsurancePage = require("../../../Models/Insurance");
-// const path = require("path");
+const mongoose = require("mongoose");
+const InsuranceSetting = require("../../../Models/InsuranceSetting");
+const MainCategory = require("../../../Models/MainCategory");
 
-// const createInsurancePage = async (req, res) => {
-//   try {
-//     const {
-//       section1Heading,
-//       section1Description,
-//       section2Heading,
-//       section2Description,
-//       section3Heading,
-//       section3Description,
-//       status,
-//     } = req.body;
-
-//     const files = req.files || [];
-
-//     // ---------- SECTION 1 CARDS ----------
-//     let section1Cards = [];
-//     const section1CardsFromClient = req.body.section1Cards
-//       ? typeof req.body.section1Cards === "string"
-//         ? JSON.parse(req.body.section1Cards)
-//         : req.body.section1Cards
-//       : [];
-
-//     if (Array.isArray(section1CardsFromClient)) {
-//       section1Cards = section1CardsFromClient.map((card, idx) => {
-//         const imageFile = files.find(
-//           (f) => f.fieldname === `section1Cards[${idx}][image]`
-//         );
-//         return {
-//           image: imageFile
-//             ? path.join("uploads", "insurance", imageFile.filename)
-//             : card.image || null,
-//           title: card.title || "",
-//           description: card.description || "",
-//         };
-//       });
-//     }
-
-//     // ---------- SECTION 2 CARDS ----------
-//     let section2Cards = [];
-//     const section2CardsFromClient = req.body.section2Cards
-//       ? typeof req.body.section2Cards === "string"
-//         ? JSON.parse(req.body.section2Cards)
-//         : req.body.section2Cards
-//       : [];
-
-//     if (Array.isArray(section2CardsFromClient)) {
-//       section2Cards = section2CardsFromClient.map((card) => ({
-//         title: card.title || "",
-//         description: card.description || "",
-//       }));
-//     }
-
-//     // ---------- ONLY ONE PUBLISHED PAGE ----------
-//     if (status === "published") {
-//       await InsurancePage.updateMany(
-//         { status: "published" },
-//         { $set: { status: "draft" } }
-//       );
-//     }
-
-//     // ---------- CREATE PAGE ----------
-//     const page = new InsurancePage({
-//       section1Heading,
-//       section1Description,
-//       section1Cards,
-//       section2Heading,
-//       section2Description,
-//       section2Cards,
-//       section3Heading,
-//       section3Description,
-//       status: status || "draft",
-//     });
-
-//     await page.save();
-//     res.status(201).json({ success: true, data: page });
-//     console.log("INSURANCE PAGE CREATED:", page);
-//   } catch (error) {
-//     console.error("Error creating Insurance page:", error);
-//     res.status(500).json({ success: false, message: error.message });
-//   }
-// };
-
-// module.exports = createInsurancePage;
-
-
-
-const InsurancePage = require("../../../Models/Insurance");
-const path = require("path");
-
-const createInsurancePage = async (req, res) => {
+const create = async (req, res) => {
   try {
-    const {
-      section1Heading,
-      section1Description,
-      section2Heading,
-      section2Description,
-      section3Heading,
-      section3Description,
-      status,
-    } = req.body;
+    const data = Array.isArray(req.body) ? req.body : [req.body];
 
-    const files = req.files || [];
+    const validateSetting = (entry) => {
+      const errors = [];
+      const options = ["oneYear", "lifeTime"];
 
-    // ---------- SECTION 1 CARDS ----------
-    let section1Cards = [];
-    const section1CardsFromClient = req.body.section1Cards
-      ? typeof req.body.section1Cards === "string"
-        ? JSON.parse(req.body.section1Cards)
-        : req.body.section1Cards
-      : [];
+      if (!entry.mainCategoryId || !mongoose.Types.ObjectId.isValid(entry.mainCategoryId)) {
+        errors.push("Valid main category ID is required.");
+      }
+      if (!entry.insuranceName || typeof entry.insuranceName !== "string" || entry.insuranceName.trim() === "") {
+        errors.push("Valid insurance name is required.");
+      }
 
-    if (Array.isArray(section1CardsFromClient)) {
-      section1Cards = section1CardsFromClient.map((card, idx) => {
-        const imageFile = files.find(
-          (f) => f.fieldname === `section1Cards[${idx}][image]`
-        );
-        return {
-          image: imageFile
-            ? path.join("uploads", "insurance", imageFile.filename)
-            : card.image || null,
-          title: card.title || "",
-          description: card.description || "",
-        };
+      for (const opt of options) {
+        if (isNaN(entry[opt]?.percentage) || entry[opt]?.percentage < 0) {
+          errors.push(`${opt === "oneYear" ? "1 Year" : "Life Time"} percentage must be a non-negative number.`);
+        }
+        if (!isNaN(entry[opt]?.percentage) && !Number.isInteger(entry[opt]?.percentage) && Number(entry[opt]?.percentage.toFixed(2)) !== entry[opt]?.percentage) {
+          errors.push(`${opt === "oneYear" ? "1 Year" : "Life Time"} percentage must be an integer or have at most two decimal places.`);
+        }
+        if (isNaN(entry[opt]?.gst) || entry[opt]?.gst < 0) {
+          errors.push(`${opt === "oneYear" ? "1 Year" : "Life Time"} GST must be a non-negative number.`);
+        }
+        if (!isNaN(entry[opt]?.gst) && !Number.isInteger(entry[opt]?.gst) && Number(entry[opt]?.gst.toFixed(2)) !== entry[opt]?.gst) {
+          errors.push(`${opt === "oneYear" ? "1 Year" : "Life Time"} GST must be an integer or have at most two decimal places.`);
+        }
+      }
+
+      return errors;
+    };
+
+    for (const entry of data) {
+      const errors = validateSetting(entry);
+      if (errors.length > 0) {
+        return res.status(400).json({
+          hasError: true,
+          message: errors.join(", "),
+        });
+      }
+    }
+
+    const createdSettings = [];
+
+    for (const entry of data) {
+      const { mainCategoryId, insuranceName, oneYear, lifeTime } = entry;
+
+      const mainCategoryExists = await MainCategory.findById(mainCategoryId);
+      if (!mainCategoryExists) {
+        return res.status(400).json({
+          hasError: true,
+          message: `The specified main category (ID: ${mainCategoryId}) does not exist.`,
+        });
+      }
+
+      const newSetting = new InsuranceSetting({
+        mainCategoryId,
+        insuranceName: insuranceName.trim(),
+        oneYear: {
+          percentage: Number.isInteger(oneYear.percentage) ? oneYear.percentage : Number(Number(oneYear.percentage).toFixed(2)),
+          gst: Number.isInteger(oneYear.gst) ? oneYear.gst : Number(Number(oneYear.gst).toFixed(2)),
+        },
+        lifeTime: {
+          percentage: Number.isInteger(lifeTime.percentage) ? lifeTime.percentage : Number(Number(lifeTime.percentage).toFixed(2)),
+          gst: Number.isInteger(lifeTime.gst) ? lifeTime.gst : Number(Number(lifeTime.gst).toFixed(2)),
+        },
+      });
+
+      await newSetting.save();
+      createdSettings.push(newSetting);
+    }
+
+    return res.status(201).json({
+      hasError: false,
+      message: "Insurance setting(s) created successfully.",
+      data: createdSettings,
+    });
+  } catch (error) {
+    console.error("Error creating insurance setting:", error);
+
+    if (error.code === 11000) {
+      return res.status(400).json({
+        hasError: true,
+        message: "An insurance setting with the same main category and insurance name already exists.",
       });
     }
-
-    // ---------- SECTION 2 CARDS ----------
-    let section2Cards = [];
-    const section2CardsFromClient = req.body.section2Cards
-      ? typeof req.body.section2Cards === "string"
-        ? JSON.parse(req.body.section2Cards)
-        : req.body.section2Cards
-      : [];
-
-    if (Array.isArray(section2CardsFromClient)) {
-      section2Cards = section2CardsFromClient.map((card) => ({
-        title: card.title || "",
-        description: card.description || "",
-      }));
-    }
-
-    // ---------- SECTION 3 CARDS ----------
-    let section3Cards = [];
-    const section3CardsFromClient = req.body.section3Cards
-      ? typeof req.body.section3Cards === "string"
-        ? JSON.parse(req.body.section3Cards)
-        : req.body.section3Cards
-      : [];
-
-    if (Array.isArray(section3CardsFromClient)) {
-      section3Cards = section3CardsFromClient.map((card) => ({
-        heading: card.heading || "",
-        description: card.description || "",
-        price: card.price || "",
-        cancelCondition: card.cancelCondition || "",
-        eligibility: card.eligibility || "",
-        pointers: Array.isArray(card.pointers)
-          ? card.pointers.map((p) => p || "")
-          : [],
-        buttonName: card.buttonName || "",
-        buttonLink: card.buttonLink || "",
-      }));
-    }
-
-    // ---------- ONLY ONE PUBLISHED PAGE ----------
-    if (status === "published") {
-      await InsurancePage.updateMany(
-        { status: "published" },
-        { $set: { status: "draft" } }
-      );
-    }
-
-    // ---------- CREATE PAGE ----------
-    const page = new InsurancePage({
-      section1Heading,
-      section1Description,
-      section1Cards,
-      section2Heading,
-      section2Description,
-      section2Cards,
-      section3Heading,
-      section3Description,
-      section3Cards, 
-      status: status || "draft",
+    return res.status(500).json({
+      hasError: true,
+      message: "Failed to create insurance setting.",
+      error: error.message,
     });
-
-    await page.save();
-    res.status(201).json({ success: true, data: page });
-    console.log("INSURANCE PAGE CREATED:", page);
-  } catch (error) {
-    console.error("Error creating Insurance page:", error);
-    res.status(500).json({ success: false, message: error.message });
   }
 };
 
-module.exports = createInsurancePage;
+module.exports = create;
