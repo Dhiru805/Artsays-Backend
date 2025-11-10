@@ -11,22 +11,23 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                echo '🐳 Building Docker image...'
+                echo '🐳 Building Docker image for backend...'
                 sh 'docker build -t artsays-backend .'
             }
         }
 
         stage('Run Docker Container') {
             steps {
-                echo '🚀 Running Docker container...'
+                echo '🚀 Running Docker container for backend...'
 
-                // Stop and remove old container if exists
                 sh '''
+                # Stop and remove old container if it exists
                 if [ $(docker ps -aq -f name=artsays-backend-container) ]; then
                   docker stop artsays-backend-container || true
                   docker rm artsays-backend-container || true
                 fi
 
+                # Run new backend container
                 docker run -d \
                   --name artsays-backend-container \
                   -p 3001:3001 \
@@ -38,10 +39,10 @@ pipeline {
 
     post {
         success {
-            echo '✅ Deployment completed successfully!'
+            echo '✅ Backend deployment completed successfully!'
         }
         failure {
-            echo '❌ Build or deployment failed!'
+            echo '❌ Backend build or deployment failed!'
         }
     }
 }
