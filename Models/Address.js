@@ -49,7 +49,6 @@
 //   { timestamps: true }
 // );
 
-
 // shippingAddressSchema.pre('save', async function (next) {
 //   if (this.isDefault) {
 //     await this.constructor.updateMany(
@@ -65,46 +64,50 @@
 
 // module.exports = mongoose.model('ShippingAddress', shippingAddressSchema);
 
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const addressSchema = new mongoose.Schema(
   {
-     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
     addressLine1: {
       type: String,
       trim: true,
-      required: [true, 'Address Line 1 is required']
+      required: [true, "Address Line 1 is required"],
     },
     addressLine2: {
       type: String,
-      trim: true
+      trim: true,
     },
     landmark: {
       type: String,
-      trim: true
+      trim: true,
     },
     city: {
       type: String,
       trim: true,
-      required: [true, 'City is required']
+      required: [true, "City is required"],
     },
     state: {
       type: String,
       trim: true,
-      required: [true, 'State is required']
+      required: [true, "State is required"],
     },
     country: {
       type: String,
       trim: true,
-      required: [true, 'Country is required']
+      required: [true, "Country is required"],
     },
     pincode: {
       type: String,
       trim: true,
-      required: [true, 'Pincode is required']
-    }
+      required: [true, "Pincode is required"],
+    },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model('Address', addressSchema);
+module.exports = mongoose.model("Address", addressSchema);

@@ -41,9 +41,14 @@ const ProductCouponCodeSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+ProductCouponCodeSchema.index(
+  { couponName: 1, productId: 1 },
+  { unique: true }
+);
 
-ProductCouponCodeSchema.index({ couponName: 1, productId: 1 }, { unique: true });
-
-const ProductCouponCode = mongoose.model("ProductCouponCode", ProductCouponCodeSchema);
+const ProductCouponCode = mongoose.model(
+  "ProductCouponCode",
+  ProductCouponCodeSchema
+);
 
 module.exports = ProductCouponCode;

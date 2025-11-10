@@ -13,7 +13,6 @@ RUN npm install
 # Copy all project files
 COPY . .
 
-
 # Expose the port your app runs on
 EXPOSE 3001
 

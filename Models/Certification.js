@@ -40,14 +40,14 @@ const certificationsSchema = new mongoose.Schema(
     certificationPrice: {
       type: Number,
       required: true,
-      default: 99, 
+      default: 99,
     },
   },
   { timestamps: true }
 );
 
 certificationsSchema.index(
- { userId: 1, productId: 1, certificationId: 1 },
+  { userId: 1, productId: 1, certificationId: 1 },
   { unique: true }
 );
 
